@@ -129,11 +129,11 @@ def run():
         ss["assistant"] = assistant
     assistant = ss["assistant"]
 
-    st.set_page_config(page_title="Expert chatbot", layout="centered")
+    st.set_page_config(page_title="Dr. Tousse", layout="centered")
     # Show title and description.
     st.title("Dr. Tousse")
     st.write(
-        "Je suis Mme Tousse, experte en cessation tabagique, ici pour vous accompagner dans votre démarche d’arrêt du tabac. Que vous soyez prêt à arrêter, en réflexion, ou simplement curieux d’en savoir plus, je suis là pour répondre à vos questions et vous donner des conseils adaptés à votre situation.. "
+        "Je suis Mme Tousse, Docteur et experte en cessation tabagique, ici pour vous accompagner dans votre démarche d’arrêt du tabac. Que vous soyez prêt à arrêter, en réflexion, ou simplement curieux d’en savoir plus, je suis là pour répondre à vos questions et vous donner des conseils adaptés à votre situation.. "
     )
 
     if "messages" not in st.session_state:

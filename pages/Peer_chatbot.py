@@ -129,8 +129,9 @@ def run():
         ss["assistant"] = assistant
     assistant = ss["assistant"]
 
-    st.set_page_config(page_title="Expert chatbot", layout="centered")
-    st.title(f"Expert chatbot")
+    st.set_page_config(page_title="Mr Kufkuf", layout="centered")
+    st.title(f"Mr Kufkuf")
+    st.write("Si t’es ici, c’est que l’idée d’arrêter te trotte dans la tête, ou que t’as déjà commencé à réduire. Peu importe où tu en es, t’es pas seul ! On peut en parler, échanger des astuces, et surtout, avancer ensemble sans jugement.")
 
     if "messages" not in st.session_state:
         ss.messages = []
