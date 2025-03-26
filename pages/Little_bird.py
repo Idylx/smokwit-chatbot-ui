@@ -31,7 +31,7 @@ client: OpenAI = create_assistants_client()
 
 def add_message_to_state_session(message):
     if len(message) > 0:
-        ss.messages_peer.append({"role": "assistant", "content": message})
+        ss.messages_lilbird.append({"role": "assistant", "content": message})
         
         
 if 'tool_requests' not in ss:
@@ -106,7 +106,7 @@ def data_streamer():
 def display_stream(content_stream, create_context=True):
     ss.stream = content_stream
     if create_context:
-        with st.chat_message("assistant", avatar="🐦"):
+        with st.chat_message("assistant", avatar="🐦"):  # Changed from 👩‍🏭 to 🐦
             response = st.write_stream(data_streamer)
     else:
         response = st.write_stream(data_streamer)
@@ -121,25 +121,24 @@ def display_stream(content_stream, create_context=True):
         
         
 def run():
-    # assistant session state key to be peer-specific
-    if "peer_assistant" not in ss:
-        assistant = client.beta.assistants.retrieve(assistant_id=os.environ["PEER_ID"])
+    # assistant session state key to be bird-specific
+    if "bird_assistant" not in ss:
+        assistant = client.beta.assistants.retrieve(assistant_id=os.environ["GAME_ID"])
         if assistant is None:
             raise RuntimeError(f"Assistant not found.")
         logger.info(f"Located assistant: {assistant.name}")
-        ss["peer_assistant"] = assistant
-    assistant = ss["peer_assistant"]
+        ss["bird_assistant"] = assistant
+    assistant = ss["bird_assistant"]
 
-    st.set_page_config(page_title="Mr Kufkuf", layout="centered")
-    st.title(f"Mr Kufkuf")
+    st.set_page_config(page_title="Little bird", layout="centered")
+    st.title(f"Little bird")
     st.write("Si t’es ici, c’est que l’idée d’arrêter te trotte dans la tête, ou que t’as déjà commencé à réduire. Peu importe où tu en es, t’es pas seul ! On peut en parler, échanger des astuces, et surtout, avancer ensemble sans jugement.")
 
-    if "messages_peer" not in st.session_state:
-        ss.messages_peer = []
+    if "messages_lilbird" not in st.session_state:
+        ss.messages_lilbird = []
 
-    # Display chat messages from state session 
-
-    for message in ss.messages_peer:
+    # Update the message display loop
+    for message in ss.messages_lilbird:
         if message["role"] == "assistant":
             with st.chat_message(message["role"], avatar="🐦"):
                 st.write(message["content"])
@@ -147,19 +146,19 @@ def run():
             with st.chat_message(message["role"]):
                 st.write(message["content"])
 
-    if prompt := st.chat_input("Vous pouvez discuter avec Mr Kufkuf"):
+    if prompt := st.chat_input("Vous pouvez parler avec le petit oiseau"):
         # Display user message and add to history
         with st.chat_message("user"):
             st.write(prompt)
-        ss.messages_peer.append({"role": "user", "content": prompt})
+        ss.messages_lilbird.append({"role": "user", "content": prompt})
 
-        # Change thread session state key to be peer-specific
-        if 'peer_thread' in ss:
-            thread = ss['peer_thread']
+        # Change thread session state key to be bird-specific
+        if 'bird_thread' in ss:
+            thread = ss['bird_thread']
         else:
             thread = client.beta.threads.create()
             logger.info(f"Created new thread: {thread.id}")
-            ss['peer_thread'] = thread
+            ss['bird_thread'] = thread
 
         # Add user message to the thread
         client.beta.threads.messages.create(thread_id=thread.id,
@@ -173,9 +172,10 @@ def run():
         ) as stream:
             # Start writing assistant messages to chat
             display_stream(stream)
+            # Update tool requests handling
             while not tool_requests.empty():
                 logger.info("Handling tool requests")
-                with st.chat_message("assistant", avatar="🐦"):
+                with st.chat_message("assistant", avatar="🐦"):  # Changed from 👩‍🏭 to 🐦
                     tool_outputs, thread_id, run_id = handle_requires_action(tool_requests.get())
                     with client.beta.threads.runs.submit_tool_outputs_stream(
                             thread_id=thread_id,

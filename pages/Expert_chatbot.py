@@ -31,7 +31,7 @@ client: OpenAI = create_assistants_client()
 
 def add_message_to_state_session(message):
     if len(message) > 0:
-        ss.messages.append({"role": "assistant", "content": message})
+        ss.messages_expert.append({"role": "assistant", "content": message})
         
         
 if 'tool_requests' not in ss:
@@ -106,7 +106,7 @@ def data_streamer():
 def display_stream(content_stream, create_context=True):
     ss.stream = content_stream
     if create_context:
-        with st.chat_message("assistant"):
+        with st.chat_message("assistant", avatar="👩‍⚕️"):
             response = st.write_stream(data_streamer)
     else:
         response = st.write_stream(data_streamer)
@@ -121,13 +121,14 @@ def display_stream(content_stream, create_context=True):
         
         
 def run():
-    if "assistant" not in ss:
+    # Assistant session state key to be expert-specific
+    if "expert_assistant" not in ss:
         assistant = client.beta.assistants.retrieve(assistant_id=os.environ["EXPERT_ID"])
         if assistant is None:
             raise RuntimeError(f"Assistant not found.")
         logger.info(f"Located assistant: {assistant.name}")
-        ss["assistant"] = assistant
-    assistant = ss["assistant"]
+        ss["expert_assistant"] = assistant
+    assistant = ss["expert_assistant"]
 
     st.set_page_config(page_title="Dr. Tousse", layout="centered")
     # Show title and description.
@@ -136,27 +137,31 @@ def run():
         "Je suis Mme Tousse, Docteur et experte en cessation tabagique, ici pour vous accompagner dans votre démarche d’arrêt du tabac. Que vous soyez prêt à arrêter, en réflexion, ou simplement curieux d’en savoir plus, je suis là pour répondre à vos questions et vous donner des conseils adaptés à votre situation.. "
     )
 
-    if "messages" not in st.session_state:
-        ss.messages = []
+    if "messages_expert" not in st.session_state:
+        ss.messages_expert = []
 
     # Display chat messages from state session on streamlit
-    for message in ss.messages:
-        with st.chat_message(message["role"]):
-            st.write(message["content"])
+    for message in ss.messages_expert:
+        if message["role"] == "assistant":
+            with st.chat_message(message["role"], avatar="👩‍⚕️"):
+                st.write(message["content"])
+        else:
+            with st.chat_message(message["role"]):
+                st.write(message["content"])
 
     if prompt := st.chat_input("Vous pouvez poser une question à l'expert"):
         # Display user message and add to history
         with st.chat_message("user"):
             st.write(prompt)
-        ss.messages.append({"role": "user", "content": prompt})
+        ss.messages_expert.append({"role": "user", "content": prompt})
 
-        # Create a new thread if not already created
-        if 'thread' in ss:
-            thread = ss['thread']
+        # Change thread session state key to be expert-specific
+        if 'expert_thread' in ss:
+            thread = ss['expert_thread']
         else:
             thread = client.beta.threads.create()
             logger.info(f"Created new thread: {thread.id}")
-            ss['thread'] = thread
+            ss['expert_thread'] = thread
 
         # Add user message to the thread
         client.beta.threads.messages.create(thread_id=thread.id,
@@ -172,7 +177,7 @@ def run():
             display_stream(stream)
             while not tool_requests.empty():
                 logger.info("Handling tool requests")
-                with st.chat_message("assistant"):
+                with st.chat_message("assistant", avatar="👩‍⚕️"):
                     tool_outputs, thread_id, run_id = handle_requires_action(tool_requests.get())
                     with client.beta.threads.runs.submit_tool_outputs_stream(
                             thread_id=thread_id,
