@@ -15,10 +15,10 @@ st.markdown(
 )
 
 # Présentation des deux chatbots
-st.header("🤖 Deux Chatbots Complémentaires : Expert et Peer")
+st.header("🤖 Trois Chatbots Complémentaires : Expert, Paire et l'Oiseau")
 
 ## Chatbot Expert
-st.subheader("📚 Chatbot Expert")
+st.subheader("📚 Expert")
 st.markdown(
     """
     Le chatbot expert repose sur le modèle des **5A** (Ask, Advise, Assess, Assist, Arrange). Il vous aide à :
@@ -29,13 +29,23 @@ st.markdown(
 )
 
 ## Chatbot Peer
-st.subheader("🗣️ Chatbot Peer")
+st.subheader("🗣️ Peer")
 st.markdown(
     """
     L'expérience des autres est une source précieuse de motivation ! Le chatbot Peer vous permet :
     - D'échanger avec un compagnon virtuel qui partage des témoignages inspirants
     - D'obtenir des astuces pratiques issues d'expériences réelles
     - De bénéficier d’un soutien émotionnel et motivant pour surmonter les difficultés
+    """
+)
+
+## Chatbot Peer
+st.subheader("🐦 L'oiseau")
+st.markdown(
+    """
+    Un tout petit oiseau vient d’éclore… et il a déjà été exposé à la fumée !
+    Dans cette partie gamifiée, le joueur doit s’occuper d’un oisillon fragile, lui offrir un environnement sain, l’aider à résister à l’appel de la cigarette et le guider vers une vie sans dépendance.
+    Chaque action compte : attention, négligence ou rechute auront un impact direct sur sa santé, son humeur et son développement.
     """
 )
 
