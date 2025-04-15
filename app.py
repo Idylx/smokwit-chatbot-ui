@@ -9,13 +9,13 @@ st.title("🚬 Smokwit : L'Accompagnement Personnalisé pour l'Arrêt du Tabac")
 # Introduction
 st.markdown(
     """
-    Bienvenue sur **Smokwit**, une plateforme innovante conçue pour accompagner les fumeurs dans leur démarche d'arrêt du tabac. 
-    Grâce à une combinaison unique d'intelligence artificielle et de soutien humain, Smokwit offre un accompagnement personnalisé et adapté aux besoins de chacun.
+    Bienvenue sur **Smokwit**, une plateforme conçue pour accompagner les fumeurs dans leur arrêt du tabac. 
+    Grâce à une combinaison unique d'intelligence artificielle et de soutien humain, Smokwit vous accompagne afin de vous aider à arrêter de fumerr.
     """
 )
 
 # Présentation des deux chatbots
-st.header("🤖 Trois Chatbots Complémentaires : Expert, Paire et l'Oiseau")
+st.header("🤖 4 Chatbots  : Expert, un ex-fumeur, un fumeur et l'Oiseau (en test")
 
 ## Chatbot Expert
 st.subheader("📚 Expert")
@@ -29,13 +29,23 @@ st.markdown(
 )
 
 ## Chatbot Peer
-st.subheader("🗣️ Peer")
+st.subheader("🗣️ Ex-fumeur")
 st.markdown(
     """
-    L'expérience des autres est une source précieuse de motivation ! Le chatbot Peer vous permet :
+    L'expérience des autres est une source précieuse de motivation ! Le chatbot Ex-fumeur vous permet :
     - D'échanger avec un compagnon virtuel qui partage des témoignages inspirants
     - D'obtenir des astuces pratiques issues d'expériences réelles
     - De bénéficier d’un soutien émotionnel et motivant pour surmonter les difficultés
+    """
+)
+
+## Chatbot Fumeur
+st.subheader("🗣️ Fumeur")
+st.markdown(
+    """
+    Se sentir compris et ne pas être seul dans la même galère ! Le chatbot Fumeur vous permet :
+    - D'échanger avec un fumeur qui souhaite arrêter, mais qui a encore des rechutes
+    - Echanger des conseil et des astuces pratiques pour surmonter les envies
     """
 )
 
@@ -49,16 +59,6 @@ st.markdown(
     """
 )
 
-# Pourquoi choisir Smokwit ?
-st.header("✅ Pourquoi choisir Smokwit ?")
-st.markdown(
-    """
-    - **Un accompagnement accessible 24/7** : Nos chatbots sont disponibles à tout moment pour vous aider.
-    - **Une approche adaptée à votre rythme** : Que vous soyez prêt à arrêter aujourd’hui ou encore hésitant, nous adaptons nos conseils à votre progression.
-    - **Des recommandations basées sur la science** : Notre chatbot expert utilise des stratégies validées scientifiquement pour maximiser vos chances de succès.
-    - **Un soutien motivant et bienveillant** : Grâce au chatbot peer, vous bénéficiez d’un appui émotionnel pour rester motivé.
-    """
-)
 
 # Call to Action
 st.success("Rejoignez-nous sur **Smokwit** et faites le premier pas vers une vie sans tabac ! 🚀")
