@@ -356,7 +356,7 @@ def run():
 
     # Description text - keep your current description
     st.write(
-        "Bonjour, j'ai arrêté de fumer il y a 1 an. Je me souviens des défis, mais aussi du soulagement quand j'ai enfin réussi à arrêter. Parlez-moi de votre expérience avec le tabac ou des questions que vous pourriez avoir, je ferai de mon mieux pour vous accompagner."
+        "Peu importe où tu en es, t’es pas seul ! J'essaie aussi d'arrêter... On peut en parler, échanger des astuces et aussi se soutenir."
     )
 
     # Initialize message history

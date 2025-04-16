@@ -332,7 +332,7 @@ def run():
     
     with title_col:
         # Show title
-        st.title("Little Bird Game")
+        st.title("Little Bird")
     
     with model_col:
         # Dropdown for model selection next to title
@@ -356,7 +356,7 @@ def run():
 
     # Description text
     st.write(
-        "Bienvenue dans le jeu Little Bird ! Je suis un petit oiseau qui a besoin de ton aide. Pour m'aider à grandir et à devenir fort, tu dois me raconter des histoires sur comment tu as arrêté de fumer ou comment tu comptes le faire. Plus tes histoires sont sincères et détaillées, plus je grandis !"
+        "Je suis un petit oiseau qui a besoin de ton aide. Pour m'aider à grandir et à devenir fort, tu dois me raconter des histoires. Plus tes histoires sont sincères et détaillées, plus je grandis !"
     )
 
     # Initialize message history

@@ -360,7 +360,7 @@ def run():
 
     # Description text
     st.write(
-        "Si t'es ici, c'est que l'idée d'arrêter te trotte dans la tête. Moi j'étais comme toi y'a pas longtemps. On peut papoter, jt'ai - je t'accompagne dans ton chemin - à ta façon."
+        "Si t’es ici, c’est que l’idée d’arrêter te trotte dans la tête, ou que t’as déjà commencé à réduire ta conssommation de clope. Peu importe où tu en es, t’es pas seul ! On peut en parler, échanger des astuces, et surtout, avancer ensemble."
     )
 
     # Initialize message history
