@@ -3,7 +3,8 @@ import logging
 import queue
 import json
 import time
-
+import requests
+from io import StringIO
 import streamlit as st
 from openai import OpenAI
 from streamlit import session_state as ss
@@ -33,7 +34,202 @@ def add_message_to_state_session(message):
     if len(message) > 0:
         ss.messages_lilbird.append({"role": "assistant", "content": message})
         
+def get_bird_personality():
+    """Read the game personality file content"""
+    try:
+        with open("llm_personalitites/game.txt", "r", encoding="utf-8") as f:
+            return f.read()
+    except Exception as e:
+        logger.error(f"Failed to read personality file: {e}")
+        return "You are a helpful little bird character in a game about quitting smoking."
+
+def call_infomaniak_llama(prompt, bird_context, model_name="llama3"):
+    """Call Infomaniak's Llama 3.3 API with the provided prompt and context"""
+    try:
+        product_id = os.getenv("INFOMANIAK_PRODUCT_ID", "")
+        api_key = os.getenv("INFOMANIAK_API_KEY", "")
         
+        logger.info(f"Calling Infomaniak Llama API with product ID: {product_id}")
+        
+        if not product_id or not api_key:
+            logger.error("Infomaniak API credentials not found")
+            st.error("Infomaniak API credentials not found. Please set INFOMANIAK_PRODUCT_ID and INFOMANIAK_API_KEY in .env file.")
+            return None
+            
+        url = f"https://api.infomaniak.com/1/ai/{product_id}/openai/chat/completions"
+        
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        # Make sure we have the right history format for the API
+        conversation_history = []
+        if "messages_bird" in ss and len(ss.messages_bird) > 0:
+            # Convert history to appropriate format - only include relevant context
+            # Limit to last 10 messages to avoid token limits
+            for msg in ss.messages_bird[-10:]:
+                conversation_history.append({"role": msg["role"], "content": msg["content"]})
+        
+        # Always add the system message first
+        messages = [{"role": "system", "content": bird_context}]
+        # Add conversation history
+        messages.extend(conversation_history)
+        # Add the current user prompt
+        messages.append({"role": "user", "content": prompt})
+        
+        payload = {
+            "model": model_name,
+            "messages": messages,
+            "temperature": 0.7,
+            "stream": True,
+            "max_tokens": 1024
+        }
+        
+        response = requests.post(url, headers=headers, json=payload, stream=True)
+        logger.info(f"Received response with status code: {response.status_code}")
+        
+        return response
+        
+    except Exception as e:
+        logger.error(f"Error calling Infomaniak API: {e}")
+        st.error(f"Error connecting to Infomaniak API: {str(e)}")
+        return None
+
+def stream_llama_response(response):
+    """Stream the response from Llama API"""
+    if response is None:
+        logger.error("Llama API response is None")
+        yield "Error connecting to Llama API"
+        return "Error connecting to Llama API"
+        
+    buffer = StringIO()
+    try:
+        logger.info(f"Starting to stream Llama response, status code: {response.status_code}")
+        
+        if response.status_code != 200:
+            error_msg = f"API error: {response.status_code} - {response.text}"
+            logger.error(error_msg)
+            yield error_msg
+            return error_msg
+            
+        for line in response.iter_lines():
+            if not line:
+                continue
+                
+            line_str = line.decode('utf-8')
+            
+            # Check for data: prefix (SSE format)
+            if line_str.startswith('data: '):
+                try:
+                    data = line_str[6:]  # Remove 'data: ' prefix
+                    if data == '[DONE]':
+                        continue
+                        
+                    try:
+                        # Try parsing as JSON
+                        json_data = json.loads(data)
+                        
+                        # Handle OpenAI-compatible format
+                        if 'choices' in json_data and json_data['choices']:
+                            content = None
+                            
+                            # Try different possible formats
+                            if 'delta' in json_data['choices'][0]:
+                                content = json_data['choices'][0]['delta'].get('content')
+                            elif 'text' in json_data['choices'][0]:
+                                content = json_data['choices'][0].get('text')
+                            elif 'message' in json_data['choices'][0]:
+                                content = json_data['choices'][0]['message'].get('content')
+                                
+                            if content:
+                                buffer.write(content)
+                                yield content
+                        
+                    except json.JSONDecodeError:
+                        # Not JSON, use as raw text
+                        if data != '[DONE]':
+                            buffer.write(data)
+                            yield data
+                        
+                except Exception as e:
+                    logger.error(f"Error processing line: {e}")
+            else:
+                # Try parsing as JSON directly
+                try:
+                    json_data = json.loads(line_str)
+                    if 'choices' in json_data and json_data['choices']:
+                        content = None
+                        if 'delta' in json_data['choices'][0]:
+                            content = json_data['choices'][0]['delta'].get('content')
+                        elif 'text' in json_data['choices'][0]:
+                            content = json_data['choices'][0].get('text')
+                        elif 'message' in json_data['choices'][0]:
+                            content = json_data['choices'][0]['message'].get('content')
+                            
+                        if content:
+                            buffer.write(content)
+                            yield content
+                except json.JSONDecodeError:
+                    # Not JSON, treat as raw text
+                    buffer.write(line_str)
+                    yield line_str
+                    
+    except Exception as e:
+        logger.error(f"Error streaming Llama response: {e}")
+        error_msg = f"Error: {str(e)}"
+        yield error_msg
+        return error_msg
+    
+    # Return the full text for history
+    full_text = buffer.getvalue()
+    buffer.close()
+    return full_text
+
+def test_infomaniak_api():
+    """Test the Infomaniak API with a simple request, no streaming"""
+    try:
+        product_id = os.getenv("INFOMANIAK_PRODUCT_ID", "")
+        api_key = os.getenv("INFOMANIAK_API_KEY", "")
+        
+        if not product_id or not api_key:
+            return "Error: API credentials not found"
+            
+        url = f"https://api.infomaniak.com/1/ai/{product_id}/openai/chat/completions"
+        
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        payload = {
+            "model": "llama3",
+            "messages": [
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": "Say hello!"}
+            ],
+            "temperature": 0.7,
+            "stream": False
+        }
+        
+        logger.info(f"Testing API with non-streaming request")
+        response = requests.post(url, headers=headers, json=payload)
+        
+        if response.status_code == 200:
+            try:
+                json_data = response.json()
+                if 'choices' in json_data and json_data['choices']:
+                    content = json_data['choices'][0]['message']['content']
+                    return f"API test successful! Response: {content}"
+            except Exception as e:
+                return f"API returned 200 but could not parse response: {e}"
+        else:
+            return f"API test failed with status {response.status_code}"
+            
+    except Exception as e:
+        return f"API test error: {e}"
+
+# Keep existing tool_requests and related functions
 if 'tool_requests' not in ss:
     ss['tool_requests'] = queue.Queue()
 tool_requests = ss['tool_requests']
@@ -42,8 +238,8 @@ def hello_world(name: str) -> str:
     time.sleep(5) # Demonstrate a long-running function
     return f"Hello {name}!"
 
-
 def handle_requires_action(tool_request):
+    # Keep existing code
     st.toast("Running a function", icon=":material/function:")
     tool_outputs = []
     data = tool_request.data
@@ -69,11 +265,7 @@ def handle_requires_action(tool_request):
     return tool_outputs, data.thread_id, data.id        
         
 def data_streamer():
-    """
-    Stream data from the assistant. Text messages are yielded. Images and tool requests are put in the queue.
-    :return:
-    :rtype:
-    """
+    # Keep existing code
     logger.info(f"Starting data streamer on {ss.stream}")
     st.toast("Thinking...", icon=":material/emoji_objects:")
     content_produced = False
@@ -106,7 +298,7 @@ def data_streamer():
 def display_stream(content_stream, create_context=True):
     ss.stream = content_stream
     if create_context:
-        with st.chat_message("assistant", avatar="🐦"):  # Changed from 👩‍🏭 to 🐦
+        with st.chat_message("assistant", avatar="🐦"):
             response = st.write_stream(data_streamer)
     else:
         response = st.write_stream(data_streamer)
@@ -119,9 +311,11 @@ def display_stream(content_stream, create_context=True):
             # Single message in response
             add_message_to_state_session(response)        
         
-        
 def run():
-    # assistant session state key to be bird-specific
+    # Set page config first
+    st.set_page_config(page_title="Little Bird", layout="centered")
+    
+    # Assistant session state key
     if "bird_assistant" not in ss:
         assistant = client.beta.assistants.retrieve(assistant_id=os.environ["GAME_ID"])
         if assistant is None:
@@ -129,60 +323,135 @@ def run():
         logger.info(f"Located assistant: {assistant.name}")
         ss["bird_assistant"] = assistant
     assistant = ss["bird_assistant"]
+    
+    # Load personality
+    bird_context = get_bird_personality()
 
-    st.set_page_config(page_title="Little bird", layout="centered")
-    st.title(f"Little bird")
-    st.write("Si t’es ici, c’est que l’idée d’arrêter te trotte dans la tête, ou que t’as déjà commencé à réduire. Peu importe où tu en es, t’es pas seul ! On peut en parler, échanger des astuces, et surtout, avancer ensemble sans jugement.")
+    # Create columns for title and model selection
+    title_col, model_col = st.columns([3, 1])
+    
+    with title_col:
+        # Show title
+        st.title("Little Bird Game")
+    
+    with model_col:
+        # Dropdown for model selection next to title
+        if "selected_model_bird" not in st.session_state:
+            ss.selected_model_bird = "OpenAI"
+            
+        selected_model = st.selectbox(
+            "Model",
+            ["OpenAI", "Llama 3.3"],
+            key="model_selector_bird",
+            on_change=lambda: setattr(ss, "selected_model_bird", ss.model_selector_bird)
+        )
+    
+    # Add API test button
+    with st.sidebar:
+        st.title("API Testing")
+        if st.button("Test Infomaniak API"):
+            with st.spinner("Testing API..."):
+                result = test_infomaniak_api()
+                st.text_area("API Test Result", result, height=200)
 
-    if "messages_lilbird" not in st.session_state:
-        ss.messages_lilbird = []
+    # Description text
+    st.write(
+        "Bienvenue dans le jeu Little Bird ! Je suis un petit oiseau qui a besoin de ton aide. Pour m'aider à grandir et à devenir fort, tu dois me raconter des histoires sur comment tu as arrêté de fumer ou comment tu comptes le faire. Plus tes histoires sont sincères et détaillées, plus je grandis !"
+    )
 
-    # Update the message display loop
-    for message in ss.messages_lilbird:
+    # Initialize message history
+    if "messages_bird" not in st.session_state:
+        ss.messages_bird = []
+
+    # Display chat messages from state
+    for message in ss.messages_bird:
         if message["role"] == "assistant":
             with st.chat_message(message["role"], avatar="🐦"):
                 st.write(message["content"])
         else:
             with st.chat_message(message["role"]):
                 st.write(message["content"])
-
-    if prompt := st.chat_input("Vous pouvez parler avec le petit oiseau"):
-        # Display user message and add to history
+    
+    # Use standard Streamlit chat input
+    prompt = st.chat_input("Discutez avec Little Bird...")
+    
+    # Handle user input and generate responses
+    if prompt:
+        # Add user message to history and display it
         with st.chat_message("user"):
             st.write(prompt)
-        ss.messages_lilbird.append({"role": "user", "content": prompt})
+            
+        ss.messages_bird.append({"role": "user", "content": prompt})
+        
+        # Process based on the selected model
+        if ss.model_selector_bird == "OpenAI":
+            # OpenAI processing
+            if 'bird_thread' in ss:
+                thread = ss['bird_thread']
+            else:
+                thread = client.beta.threads.create()
+                logger.info(f"Created new thread: {thread.id}")
+                ss['bird_thread'] = thread
 
-        # Change thread session state key to be bird-specific
-        if 'bird_thread' in ss:
-            thread = ss['bird_thread']
-        else:
-            thread = client.beta.threads.create()
-            logger.info(f"Created new thread: {thread.id}")
-            ss['bird_thread'] = thread
+            # Add user message to the thread
+            client.beta.threads.messages.create(thread_id=thread.id,
+                                              role="user",
+                                              content=prompt)
 
-        # Add user message to the thread
-        client.beta.threads.messages.create(thread_id=thread.id,
-                                            role="user",
-                                            content=prompt)
-
-        # Create a new run with stream
-        with client.beta.threads.runs.stream(
-                thread_id=thread.id,
-                assistant_id=assistant.id
-        ) as stream:
-            # Start writing assistant messages to chat
-            display_stream(stream)
-            # Update tool requests handling
-            while not tool_requests.empty():
-                logger.info("Handling tool requests")
-                with st.chat_message("assistant", avatar="🐦"):  # Changed from 👩‍🏭 to 🐦
+            # Create a new run with stream
+            with client.beta.threads.runs.stream(
+                    thread_id=thread.id,
+                    assistant_id=assistant.id
+            ) as stream:
+                # Start writing assistant messages to chat
+                display_stream(stream)
+                
+                while not tool_requests.empty():
+                    logger.info("Handling tool requests")
                     tool_outputs, thread_id, run_id = handle_requires_action(tool_requests.get())
                     with client.beta.threads.runs.submit_tool_outputs_stream(
                             thread_id=thread_id,
                             run_id=run_id,
                             tool_outputs=tool_outputs
                     ) as tool_stream:
-                        display_stream(tool_stream, create_context=False)
-
+                        with st.chat_message("assistant", avatar="🐦"):
+                            display_stream(tool_stream, create_context=False)
+        else:
+            # Llama 3.3 processing
+            logger.info("Using Llama 3.3 model")
+            
+            # Test different model names
+            model_names = ["llama-3.3-70b", "llama3"]
+            
+            response = None
+            for model_name in model_names:
+                try:
+                    logger.info(f"Trying with model name: {model_name}")
+                    response = call_infomaniak_llama(prompt, bird_context, model_name=model_name)
+                    if response and response.status_code == 200:
+                        logger.info(f"Successful response with model: {model_name}")
+                        break
+                except Exception as e:
+                    logger.error(f"Error with model {model_name}: {e}")
+            
+            with st.chat_message("assistant", avatar="🐦"):
+                if response is None:
+                    error_msg = "Failed to connect to Llama API. Check your credentials and logs."
+                    st.error(error_msg)
+                    ss.messages_bird.append({"role": "assistant", "content": error_msg})
+                elif response.status_code != 200:
+                    error_msg = f"API error: {response.status_code} - Check logs for details"
+                    st.error(error_msg)
+                    ss.messages_bird.append({"role": "assistant", "content": error_msg})
+                else:
+                    logger.info("Streaming Llama 3.3 response")
+                    full_response = st.write_stream(stream_llama_response(response))
+                    logger.info(f"Completed Llama response stream, got full response: {bool(full_response)}")
+                    if full_response:
+                        # Add to message history
+                        ss.messages_bird.append({"role": "assistant", "content": full_response})
+                    else:
+                        st.error("Empty response received from Llama API")
+                        ss.messages_bird.append({"role": "assistant", "content": "Sorry, I received an empty response. Please try again."})
 
 run()
