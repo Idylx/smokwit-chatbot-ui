@@ -358,23 +358,52 @@ def run():
                 result = test_infomaniak_api()
                 st.text_area("API Test Result", result, height=200)
 
-    # Description text
-    st.write(
-        "Si t’es ici, c’est que l’idée d’arrêter te trotte dans la tête, ou que t’as déjà commencé à réduire ta conssommation de clope. Peu importe où tu en es, t’es pas seul ! On peut en parler, échanger des astuces, et surtout, avancer ensemble."
-    )
-
     # Initialize message history
     if "messages_peer" not in st.session_state:
         ss.messages_peer = []
-
-    # Display chat messages from state
-    for message in ss.messages_peer:
+        
+    # Check if intro has been displayed
+    if "peer_intro_displayed" not in st.session_state:
+        ss.peer_intro_displayed = False
+    
+    for i, message in enumerate(ss.messages_peer):
+        # Skip only the hidden user prompt message (usually the first message)
+        if message["role"] == "user" and "Salut, qui es-tu et comment as-tu arrêté de fumer?" in message["content"]:
+            continue
+            
+        # Display all other messages, including the first assistant response
         if message["role"] == "assistant":
             with st.chat_message(message["role"], avatar="🐦"):
                 st.write(message["content"])
         else:
             with st.chat_message(message["role"]):
                 st.write(message["content"])
+    
+    # Stream introduction message if it's the first load
+    if not ss.peer_intro_displayed:
+        # Add hidden user message to history
+        ss.messages_peer.append({"role": "user", "content": "Salut, qui es-tu et comment as-tu arrêté de fumer?"})
+        
+        # Stream the assistant's introduction message
+        intro_message = "Hello! Moi c'est Kufkuf. J'étais accro à la clope, un paquet par jour pendant des années. J'ai arrêté y'a quelques mois, et franchement, ça n'a pas été facile! J'ai eu mes hauts et mes bas, quelques rechutes aussi, mais j'y suis arrivé. C'est pour ça que je suis là, pour partager mon expérience et t'aider si t'essaies aussi d'arrêter. On est tous différents, mais traverser ces galères ensemble, ça aide vraiment. Alors, t'en es où avec la cigarette?"
+        
+        with st.chat_message("assistant", avatar="🐦"):
+            # Create a generator that yields parts of the intro message to simulate typing
+            def stream_intro():
+                words = intro_message.split()
+                for i in range(0, len(words), 3):  # Send 3 words at a time for a smooth effect
+                    chunk = " ".join(words[i:i+3]) + " "
+                    yield chunk
+                    time.sleep(0.1)  # Brief pause between chunks
+                    
+            # Stream the intro message
+            st.write_stream(stream_intro)
+        
+        # Add intro to history after displaying
+        ss.messages_peer.append({"role": "assistant", "content": intro_message})
+        
+        # Mark intro as displayed
+        ss.peer_intro_displayed = True
     
     # Use standard Streamlit chat input
     prompt = st.chat_input("Vous pouvez discuter avec Mr Kufkuf")
@@ -457,5 +486,4 @@ def run():
                     else:
                         st.error("Empty response received from Llama API")
                         ss.messages_peer.append({"role": "assistant", "content": "Sorry, I received an empty response. Please try again."})
-
-run()
+run()                  

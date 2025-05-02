@@ -350,22 +350,53 @@ def run():
                 result = test_infomaniak_api()
                 st.text_area("API Test Result", result, height=200)
 
-    # Description text
-    st.write(
-        "Je suis Mme Tousse, Docteur et experte en cessation tabagique, ici pour vous accompagner dans votre démarche d'arrêt du tabac. Que vous soyez prêt à arrêter, en réflexion, ou simplement curieux d'en savoir plus, je suis là pour répondre à vos questions et vous donner des conseils adaptés à votre situation."
-    )
-
+    
     if "messages_expert" not in st.session_state:
         ss.messages_expert = []
-
-    # Display chat messages from state
-    for message in ss.messages_expert:
+    
+    # Check if intro has been displayed
+    if "expert_intro_displayed" not in st.session_state:
+        ss.expert_intro_displayed = False
+    
+    # Display existing messages, skipping the hidden prompt
+    for i, message in enumerate(ss.messages_expert):
+        # Skip only the hidden user prompt message
+        if message["role"] == "user" and "Bonjour, qui êtes-vous et comment pouvez-vous m'aider à arrêter de fumer?" in message["content"]:
+            continue
+            
+        # Display all other messages, including the first assistant response
         if message["role"] == "assistant":
             with st.chat_message(message["role"], avatar="👩‍⚕️"):
                 st.write(message["content"])
         else:
             with st.chat_message(message["role"]):
                 st.write(message["content"])
+    
+    # Stream introduction message if it's the first load
+    if not ss.expert_intro_displayed:
+        # Add hidden user message to history
+        ss.messages_expert.append({"role": "user", "content": "Bonjour, qui êtes-vous et comment pouvez-vous m'aider à arrêter de fumer?"})
+        
+        # Stream the assistant's introduction message
+        intro_message = "Bonjour! Je suis Dr. Tousse, médecin spécialiste en cessation tabagique. Je suis ici pour vous accompagner dans votre parcours d'arrêt du tabac avec des conseils professionnels basés sur les dernières recherches médicales. N'hésitez pas à me poser vos questions sur les bienfaits de l'arrêt du tabac, les méthodes efficaces pour arrêter, ou les défis que vous rencontrez pendant ce processus. Comment puis-je vous aider aujourd'hui?"
+        
+        with st.chat_message("assistant", avatar="👩‍⚕️"):
+            # Create a generator that yields parts of the intro message to simulate typing
+            def stream_intro():
+                words = intro_message.split()
+                for i in range(0, len(words), 3):  # Send 3 words at a time for a smooth effect
+                    chunk = " ".join(words[i:i+3]) + " "
+                    yield chunk
+                    time.sleep(0.1)  # Brief pause between chunks
+                    
+            # Stream the intro message
+            st.write_stream(stream_intro)
+        
+        # Add intro to history after displaying
+        ss.messages_expert.append({"role": "assistant", "content": intro_message})
+        
+        # Mark intro as displayed
+        ss.expert_intro_displayed = True
     
     # Use standard Streamlit chat input (no custom columns)
     prompt = st.chat_input("Vous pouvez poser une question à l'expert")

@@ -234,10 +234,6 @@ if 'tool_requests' not in ss:
     ss['tool_requests'] = queue.Queue()
 tool_requests = ss['tool_requests']
 
-def hello_world(name: str) -> str:
-    time.sleep(5) # Demonstrate a long-running function
-    return f"Hello {name}!"
-
 def handle_requires_action(tool_request):
     # Keep existing code
     st.toast("Running a function", icon=":material/function:")
@@ -354,23 +350,53 @@ def run():
                 result = test_infomaniak_api()
                 st.text_area("API Test Result", result, height=200)
 
-    # Description text - keep your current description
-    st.write(
-        "Peu importe où tu en es, t’es pas seul ! J'essaie aussi d'arrêter... On peut en parler, échanger des astuces et aussi se soutenir."
-    )
-
     # Initialize message history
     if "messages_smoker" not in st.session_state:
         ss.messages_smoker = []
+        
+    # Check if intro has been displayed
+    if "smoker_intro_displayed" not in st.session_state:
+        ss.smoker_intro_displayed = False
 
-    # Display chat messages from state
-    for message in ss.messages_smoker:
+    # Display existing messages, skipping the hidden prompt
+    for i, message in enumerate(ss.messages_smoker):
+        # Skip only the hidden user prompt message
+        if message["role"] == "user" and "Bonjour, parle-moi de ton expérience avec le tabac." in message["content"]:
+            continue
+            
+        # Display all other messages, including the first assistant response
         if message["role"] == "assistant":
             with st.chat_message(message["role"], avatar="👤"):
                 st.write(message["content"])
         else:
             with st.chat_message(message["role"]):
                 st.write(message["content"])
+
+    # Stream introduction message if it's the first load
+    if not ss.smoker_intro_displayed:
+        # Add hidden user message to history
+        ss.messages_smoker.append({"role": "user", "content": "Bonjour, parle-moi de ton expérience avec le tabac."})
+        
+        # Stream the assistant's introduction message
+        intro_message = "Salut! Moi c'est Mr Doe. Comme toi, j'essaie d'arrêter de fumer. J'ai commencé à 16 ans, et maintenant j'essaie de réduire ma consommation. Certains jours sont plus difficiles que d'autres... Je comprends totalement les défis qu'on rencontre quand on essaie de décrocher. Les envies soudaines, la nervosité, les habitudes ancrées... Mais on est ensemble dans cette bataille! Dis-moi, où en es-tu dans ton parcours avec la cigarette?"
+        
+        with st.chat_message("assistant", avatar="👤"):
+            # Create a generator that yields parts of the intro message to simulate typing
+            def stream_intro():
+                words = intro_message.split()
+                for i in range(0, len(words), 3):  # Send 3 words at a time for a smooth effect
+                    chunk = " ".join(words[i:i+3]) + " "
+                    yield chunk
+                    time.sleep(0.1)  # Brief pause between chunks
+                    
+            # Stream the intro message
+            st.write_stream(stream_intro)
+        
+        # Add intro to history after displaying
+        ss.messages_smoker.append({"role": "assistant", "content": intro_message})
+        
+        # Mark intro as displayed
+        ss.smoker_intro_displayed = True
     
     # Use standard Streamlit chat input
     prompt = st.chat_input("Discutez avec un ex-fumeur...")
